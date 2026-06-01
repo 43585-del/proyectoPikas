@@ -1,0 +1,1400 @@
+
+raw
+Modos cifrado · HTML
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Modos de Operación Simétricos</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:ital,wght@0,400;0,700;1,400&family=Syne:wght@400;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollTrigger.min.js"></script>
+<style>
+  *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+ 
+  :root {
+    --black: #04060a;
+    --deep: #080d15;
+    --ecb-color: #e05a2b;
+    --cbc-color: #3a8fff;
+    --cfb-color: #9b5de5;
+    --ofb-color: #00c896;
+    --ctr-color: #ffe246;
+    --mono: 'Space Mono', monospace;
+    --display: 'Syne', sans-serif;
+  }
+ 
+  html { scroll-behavior: auto; }
+ 
+  body {
+    background: var(--black);
+    color: #f0eeea;
+    font-family: var(--display);
+    overflow-x: hidden;
+    cursor: crosshair;
+  }
+ 
+  /* ─── CANVAS PARTICLES ─── */
+  #particle-canvas {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+    opacity: 0.35;
+  }
+ 
+  /* ─── PROGRESS BAR ─── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, #ffe246, #00c896);
+    z-index: 1000;
+    width: 0%;
+    transition: width 0.1s linear;
+  }
+ 
+  /* ─── NAV ─── */
+  nav {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    padding: 1.25rem 3rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    z-index: 100;
+    mix-blend-mode: difference;
+  }
+ 
+  .nav-logo {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.3em;
+    color: #fff;
+    text-transform: uppercase;
+    opacity: 0.6;
+  }
+ 
+  .nav-dots {
+    display: flex;
+    gap: 0.5rem;
+  }
+ 
+  .nav-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: rgba(255,255,255,0.3);
+    cursor: pointer;
+    transition: all 0.3s;
+  }
+ 
+  .nav-dot.active {
+    background: #fff;
+    transform: scale(1.4);
+  }
+ 
+  /* ─── SECTIONS ─── */
+  section {
+    position: relative;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    z-index: 1;
+  }
+ 
+  /* ─── INTRO ─── */
+  #intro {
+    background: var(--black);
+  }
+ 
+  .intro-bg {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    grid-template-columns: repeat(12, 1fr);
+    grid-template-rows: repeat(8, 1fr);
+    opacity: 0.06;
+    pointer-events: none;
+  }
+ 
+  .grid-cell {
+    border: 0.5px solid rgba(255,255,255,0.5);
+  }
+ 
+  .intro-content {
+    text-align: center;
+    position: relative;
+    z-index: 2;
+    max-width: 900px;
+    padding: 2rem;
+  }
+ 
+  .intro-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.4);
+    text-transform: uppercase;
+    margin-bottom: 2rem;
+  }
+ 
+  .intro-title {
+    font-size: clamp(3rem, 10vw, 7.5rem);
+    font-weight: 800;
+    line-height: 0.92;
+    letter-spacing: -0.03em;
+    margin-bottom: 2rem;
+  }
+ 
+  .intro-title em {
+    font-style: normal;
+    display: block;
+    background: linear-gradient(135deg, #ffe246 0%, #ff8a00 50%, #e05a2b 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+ 
+  .intro-sub {
+    font-family: var(--mono);
+    font-size: 1rem;
+    color: rgba(255,255,255,0.45);
+    letter-spacing: 0.05em;
+    line-height: 2;
+    max-width: 560px;
+    margin: 0 auto 3rem;
+  }
+ 
+  .scroll-hint {
+    position: absolute;
+    bottom: 2.5rem;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+ 
+  .scroll-hint span {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.4em;
+    color: rgba(255,255,255,0.3);
+    text-transform: uppercase;
+  }
+ 
+  .scroll-line {
+    width: 1px;
+    height: 60px;
+    background: linear-gradient(to bottom, rgba(255,255,255,0.3), transparent);
+    animation: scroll-line 2s ease-in-out infinite;
+  }
+ 
+  @keyframes scroll-line {
+    0%, 100% { opacity: 0; transform: scaleY(0); transform-origin: top; }
+    50% { opacity: 1; transform: scaleY(1); transform-origin: top; }
+  }
+ 
+  /* ─── MODE SECTIONS ─── */
+  .mode-section {
+    min-height: 100vh;
+    padding: 8rem 4rem;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+ 
+  .mode-info {
+    position: relative;
+    z-index: 2;
+  }
+ 
+  .mode-number {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.4em;
+    opacity: 0.35;
+    margin-bottom: 1.2rem;
+  }
+ 
+  .mode-tag {
+    display: inline-block;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    padding: 0.3rem 0.8rem;
+    border: 1px solid currentColor;
+    letter-spacing: 0.2em;
+    margin-bottom: 1.5rem;
+    opacity: 0.7;
+  }
+ 
+  .mode-name {
+    font-size: clamp(3rem, 8vw, 5.5rem);
+    font-weight: 800;
+    line-height: 0.9;
+    margin-bottom: 0.5rem;
+    letter-spacing: -0.04em;
+  }
+ 
+  .mode-full-name {
+    font-family: var(--mono);
+    font-size: 0.8rem;
+    opacity: 0.4;
+    margin-bottom: 2rem;
+    letter-spacing: 0.05em;
+  }
+ 
+  .mode-desc {
+    font-size: 1.15rem;
+    line-height: 1.85;
+    opacity: 0.75;
+    margin-bottom: 2rem;
+    max-width: 460px;
+  }
+ 
+  .mode-facts {
+    display: flex;
+    flex-direction: column;
+    gap: 0.7rem;
+  }
+ 
+  .fact {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.75rem;
+    font-family: var(--mono);
+    font-size: 0.88rem;
+    line-height: 1.7;
+    opacity: 0.6;
+  }
+ 
+  .fact-icon {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+ 
+  .mode-visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+ 
+  .visual-canvas {
+    width: 100%;
+    max-width: 480px;
+    aspect-ratio: 1;
+  }
+ 
+  /* Backgrounds per mode */
+  #ecb-section { background: radial-gradient(ellipse at 70% 50%, rgba(224,90,43,0.12) 0%, var(--black) 70%); }
+  #cbc-section { background: radial-gradient(ellipse at 30% 50%, rgba(58,143,255,0.12) 0%, var(--black) 70%); }
+  #cfb-section { background: radial-gradient(ellipse at 70% 50%, rgba(155,93,229,0.12) 0%, var(--black) 70%); }
+  #ofb-section { background: radial-gradient(ellipse at 30% 50%, rgba(0,200,150,0.12) 0%, var(--black) 70%); }
+  #ctr-section { background: radial-gradient(ellipse at 50% 50%, rgba(255,226,70,0.1) 0%, var(--black) 70%); }
+ 
+  /* ─── COMPARE TABLE ─── */
+  #compare {
+    min-height: 100vh;
+    padding: 8rem 4rem;
+    position: relative;
+    z-index: 1;
+  }
+ 
+  .compare-header {
+    text-align: center;
+    margin-bottom: 5rem;
+  }
+ 
+  .compare-title {
+    font-size: clamp(2.5rem, 6vw, 4.5rem);
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    line-height: 1;
+  }
+ 
+  .compare-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 1px;
+    max-width: 1000px;
+    margin: 0 auto;
+    background: rgba(255,255,255,0.08);
+    border-radius: 1rem;
+    overflow: hidden;
+  }
+ 
+  .compare-col {
+    background: var(--deep);
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+ 
+  .compare-col.header-col {
+    background: rgba(255,255,255,0.04);
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding-bottom: 1.5rem;
+  }
+ 
+  .col-mode {
+    font-size: 1.8rem;
+    font-weight: 800;
+    letter-spacing: -0.04em;
+    margin-bottom: 0.25rem;
+  }
+ 
+  .col-sub {
+    font-family: var(--mono);
+    font-size: 0.6rem;
+    letter-spacing: 0.2em;
+    opacity: 0.4;
+  }
+ 
+  .compare-row-label {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    opacity: 0.45;
+    text-align: right;
+    padding-right: 1rem;
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+  }
+ 
+  .status-yes, .status-no, .status-partial {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.7rem;
+    font-weight: 700;
+    font-family: var(--mono);
+  }
+ 
+  .status-yes { background: rgba(0,200,150,0.2); color: #00c896; }
+  .status-no { background: rgba(224,90,43,0.2); color: #e05a2b; }
+  .status-partial { background: rgba(255,226,70,0.2); color: #ffe246; }
+ 
+  /* table rows */
+  .compare-table {
+    max-width: 1000px;
+    margin: 0 auto;
+    border-collapse: separate;
+    border-spacing: 1px;
+  }
+ 
+  .compare-table td, .compare-table th {
+    background: var(--deep);
+    padding: 1.2rem 1.5rem;
+    text-align: center;
+  }
+ 
+  .compare-table th {
+    background: rgba(255,255,255,0.04);
+    font-size: 1.4rem;
+    font-weight: 800;
+    letter-spacing: -0.03em;
+    padding: 2rem 1.5rem;
+  }
+ 
+  .compare-table td:first-child {
+    text-align: left;
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.15em;
+    opacity: 0.45;
+    background: rgba(255,255,255,0.02);
+  }
+ 
+  /* ─── CONCLUSION ─── */
+  #conclusion {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 4rem;
+    position: relative;
+    background: var(--black);
+  }
+ 
+  .conclusion-content {
+    max-width: 800px;
+  }
+ 
+  .conclusion-eyebrow {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    letter-spacing: 0.4em;
+    opacity: 0.35;
+    margin-bottom: 2rem;
+  }
+ 
+  .conclusion-title {
+    font-size: clamp(2.5rem, 7vw, 5.5rem);
+    font-weight: 800;
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+    margin-bottom: 2rem;
+  }
+ 
+  .conclusion-body {
+    font-size: 1.2rem;
+    line-height: 1.9;
+    opacity: 0.6;
+    margin-bottom: 3rem;
+    max-width: 620px;
+    margin-left: auto;
+    margin-right: auto;
+  }
+ 
+  .final-badges {
+    display: flex;
+    gap: 0.75rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+ 
+  .badge {
+    font-family: var(--mono);
+    font-size: 0.65rem;
+    padding: 0.4rem 1rem;
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 2rem;
+    letter-spacing: 0.2em;
+    opacity: 0.6;
+  }
+ 
+  /* ─── ZOOM-IN OPENER EFFECT ─── */
+  .zoom-bg {
+    position: absolute;
+    inset: -20%;
+    background: inherit;
+    transform: scale(1.2);
+    will-change: transform;
+    pointer-events: none;
+  }
+ 
+  /* ─── SCANLINE OVERLAY ─── */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+ 
+  /* ─── CIPHER DEMO ─── */
+  .cipher-demo {
+    margin-top: 2rem;
+    font-family: var(--mono);
+    font-size: 0.7rem;
+    line-height: 1.6;
+    opacity: 0.5;
+    padding: 1rem;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 0.5rem;
+    max-width: 440px;
+  }
+ 
+  .cipher-demo .label {
+    opacity: 0.5;
+    margin-bottom: 0.25rem;
+    letter-spacing: 0.2em;
+  }
+ 
+  .cipher-demo .value {
+    letter-spacing: 0.1em;
+    word-break: break-all;
+  }
+ 
+  /* ─── RESPONSIVE ─── */
+  @media (max-width: 900px) {
+    .mode-section {
+      grid-template-columns: 1fr;
+      padding: 6rem 2rem;
+    }
+    nav { padding: 1rem 1.5rem; }
+    .compare-table { font-size: 0.8rem; }
+    .compare-table th { font-size: 1rem; padding: 1rem; }
+    .compare-table td { padding: 0.8rem; }
+    #intro .intro-content { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+ 
+<div id="progress-bar"></div>
+ 
+<canvas id="particle-canvas"></canvas>
+ 
+<nav>
+  <div class="nav-logo" style="display: flex; align-items: center; opacity: 1;">
+    <img src="../WhatsApp Image 2026-05-30 at 4.41.02 PM.jpeg" alt="Logo" style="height: 75px; width: auto; object-fit: contain; border-radius: 6px;">
+  </div>
+  <div class="nav-dots">
+    <div class="nav-dot active" data-target="portada"></div>
+    <div class="nav-dot" data-target="intro"></div>
+    <div class="nav-dot" data-target="ecb-section" style="background:var(--ecb-color)"></div>
+    <div class="nav-dot" data-target="cbc-section" style="background:var(--cbc-color)"></div>
+    <div class="nav-dot" data-target="cfb-section" style="background:var(--cfb-color)"></div>
+    <div class="nav-dot" data-target="ofb-section" style="background:var(--ofb-color)"></div>
+    <div class="nav-dot" data-target="ctr-section" style="background:var(--ctr-color)"></div>
+    <div class="nav-dot" data-target="compare"></div>
+    <div class="nav-dot" data-target="conclusion"></div>
+  </div>
+</nav>
+ 
+<!-- ═══════════════════════ PORTADA ═══════════════════════ -->
+<section id="portada" style="position: relative; width: 100vw; height: 100vh; background: #000; display: flex; align-items: center; justify-content: center; overflow: hidden; z-index: 2;">
+  <!-- Efectos de luz -->
+  <div style="position: absolute; top: -20%; left: -20%; width: 70%; height: 70%; background: radial-gradient(circle, rgba(155,93,229,0.25) 0%, transparent 60%); filter: blur(50px); z-index: 1; pointer-events: none;"></div>
+  <div style="position: absolute; bottom: -20%; right: -20%; width: 70%; height: 70%; background: radial-gradient(circle, rgba(0,200,255,0.2) 0%, transparent 60%); filter: blur(50px); z-index: 1; pointer-events: none;"></div>
+  
+  <img src="../5bfdb894-ce3a-4099-ba16-2454ee086bf5.jpg" alt="Portada" style="position: relative; z-index: 2; width: 100%; height: 100%; object-fit: contain;">
+</section>
+
+<!-- ═══════════════════════ INTRO ═══════════════════════ -->
+<section id="intro">
+  <div class="intro-bg" id="grid-bg"></div>
+  <div class="intro-content">
+    <p class="intro-eyebrow">Criptografía Simétrica — Presentación Final</p>
+    <h1 class="intro-title">
+      Modos de
+      <em>Operación</em>
+      Simétricos
+    </h1>
+    <p class="intro-sub">
+      ECB · CBC · CFB · OFB · CTR<br>
+      Cómo AES se adapta a la realidad —<br>velocidad, seguridad, flujos y redes.
+    </p>
+  </div>
+  <div class="scroll-hint">
+    <span>Scroll</span>
+    <div class="scroll-line"></div>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ INTRO EXPLAINER ═══════════════════════ -->
+<section id="intro-explainer" style="background:var(--deep); min-height:80vh; padding:6rem 4rem;">
+  <div style="max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; gap:5rem; align-items:center;">
+    <div class="mode-info">
+      <p class="mode-number">00 — CONTEXTO</p>
+      <h2 style="font-size:clamp(2.5rem,6vw,4rem); font-weight:800; letter-spacing:-0.04em; line-height:1; margin-bottom:1.5rem;">
+        ¿Por qué existen los modos?
+      </h2>
+      <p class="mode-desc">
+        El cifrado simétrico usa <strong>una sola clave</strong> para cifrar y descifrar. AES procesa datos en bloques fijos de <strong>128 bits</strong>. El problema: el mundo real tiene archivos enormes, transmisiones continuas y estructuras complejas.
+      </p>
+      <p class="mode-desc">
+        Los modos de operación son el <em>puente</em> que define <strong>cómo aplicar AES de forma segura</strong> a cualquier cantidad de datos.
+      </p>
+    </div>
+    <div>
+      <svg viewBox="0 0 400 320" style="width:100%; opacity:0.9;">
+        <defs>
+          <marker id="arr" markerWidth="8" markerHeight="6" refX="8" refY="3" orient="auto">
+            <path d="M0,0 L8,3 L0,6" fill="rgba(255,255,255,0.5)"/>
+          </marker>
+        </defs>
+        <!-- Data blocks -->
+        <g id="data-blocks">
+          <rect x="20" y="30" width="60" height="40" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+          <text x="50" y="55" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="'Space Mono',monospace" font-size="9">P₁</text>
+          <rect x="100" y="30" width="60" height="40" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+          <text x="130" y="55" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="'Space Mono',monospace" font-size="9">P₂</text>
+          <rect x="180" y="30" width="60" height="40" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+          <text x="210" y="55" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="'Space Mono',monospace" font-size="9">P₃</text>
+          <rect x="260" y="30" width="60" height="40" rx="4" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.2)" stroke-width="0.5"/>
+          <text x="290" y="55" text-anchor="middle" fill="rgba(255,255,255,0.5)" font-family="'Space Mono',monospace" font-size="9">Pₙ</text>
+          <text x="340" y="52" fill="rgba(255,255,255,0.2)" font-size="18">…</text>
+        </g>
+        <!-- AES Box -->
+        <rect x="80" y="120" width="240" height="60" rx="8" fill="rgba(255,226,70,0.1)" stroke="rgba(255,226,70,0.4)" stroke-width="1"/>
+        <text x="200" y="148" text-anchor="middle" fill="#ffe246" font-family="'Syne',sans-serif" font-size="13" font-weight="700">AES-128</text>
+        <text x="200" y="165" text-anchor="middle" fill="rgba(255,226,70,0.5)" font-family="'Space Mono',monospace" font-size="8">+ Modo de Operación</text>
+        <!-- Output blocks -->
+        <g>
+          <rect x="20" y="240" width="60" height="40" rx="4" fill="rgba(0,200,150,0.12)" stroke="rgba(0,200,150,0.35)" stroke-width="0.5"/>
+          <text x="50" y="265" text-anchor="middle" fill="rgba(0,200,150,0.8)" font-family="'Space Mono',monospace" font-size="9">C₁</text>
+          <rect x="100" y="240" width="60" height="40" rx="4" fill="rgba(0,200,150,0.12)" stroke="rgba(0,200,150,0.35)" stroke-width="0.5"/>
+          <text x="130" y="265" text-anchor="middle" fill="rgba(0,200,150,0.8)" font-family="'Space Mono',monospace" font-size="9">C₂</text>
+          <rect x="180" y="240" width="60" height="40" rx="4" fill="rgba(0,200,150,0.12)" stroke="rgba(0,200,150,0.35)" stroke-width="0.5"/>
+          <text x="210" y="265" text-anchor="middle" fill="rgba(0,200,150,0.8)" font-family="'Space Mono',monospace" font-size="9">C₃</text>
+          <rect x="260" y="240" width="60" height="40" rx="4" fill="rgba(0,200,150,0.12)" stroke="rgba(0,200,150,0.35)" stroke-width="0.5"/>
+          <text x="290" y="265" text-anchor="middle" fill="rgba(0,200,150,0.8)" font-family="'Space Mono',monospace" font-size="9">Cₙ</text>
+        </g>
+        <!-- Arrows down to AES -->
+        <line x1="50" y1="70" x2="130" y2="120" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arr)"/>
+        <line x1="200" y1="70" x2="200" y2="120" stroke="rgba(255,255,255,0.15)" stroke-width="0.5" marker-end="url(#arr)"/>
+        <line x1="290" y1="70" x2="200" y2="120" stroke="rgba(255,255,255,0.15)" stroke-width="0.5"/>
+        <!-- Arrows from AES to output -->
+        <line x1="130" y1="180" x2="50" y2="240" stroke="rgba(0,200,150,0.2)" stroke-width="0.5" marker-end="url(#arr)"/>
+        <line x1="200" y1="180" x2="200" y2="240" stroke="rgba(0,200,150,0.2)" stroke-width="0.5" marker-end="url(#arr)"/>
+        <line x1="200" y1="180" x2="290" y2="240" stroke="rgba(0,200,150,0.2)" stroke-width="0.5" marker-end="url(#arr)"/>
+      </svg>
+    </div>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ ECB ═══════════════════════ -->
+<section class="mode-section" id="ecb-section">
+  <div class="mode-info" data-mode="ecb">
+    <p class="mode-number">01 — MODO DE OPERACIÓN</p>
+    <span class="mode-tag" style="color:var(--ecb-color); border-color:var(--ecb-color);">INSEGURO</span>
+    <h2 class="mode-name" style="color:var(--ecb-color);">ECB</h2>
+    <p class="mode-full-name">Electronic Codebook</p>
+    <p class="mode-desc">
+      Cada bloque se cifra <strong>de forma independiente</strong> con la misma clave. El modo más simple — y el más peligroso.
+    </p>
+    <p class="mode-desc" style="opacity:0.55; font-size:1.05rem;">
+      El problema fatal: bloques de texto plano idénticos producen bloques cifrados idénticos. Estructuras y patrones permanecen visibles — el famoso <em>efecto pingüino</em>.
+    </p>
+    <div class="mode-facts">
+      <div class="fact">
+        <div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div>
+        <span>✓ Rápido — procesamiento paralelo</span>
+      </div>
+      <div class="fact">
+        <div class="fact-icon" style="background:rgba(224,90,43,0.4);"></div>
+        <span>✗ No oculta patrones — vulnerable a análisis</span>
+      </div>
+      <div class="fact">
+        <div class="fact-icon" style="background:rgba(224,90,43,0.4);"></div>
+        <span>✗ Propenso a ataques de repetición</span>
+      </div>
+    </div>
+    <div class="cipher-demo" id="ecb-demo">
+      <p class="label">TEXTO PLANO →</p>
+      <p class="value" style="color:var(--ecb-color);">HOLA HOLA HOLA HOLA</p>
+      <p class="label" style="margin-top:0.75rem;">TEXTO CIFRADO ECB →</p>
+      <p class="value" style="color:rgba(255,255,255,0.4);" id="ecb-out">A3F2 A3F2 A3F2 A3F2</p>
+      <p style="margin-top:0.5rem; opacity:0.4; font-size:0.6rem;">— patrones repetidos, completamente visibles</p>
+    </div>
+  </div>
+  <div class="mode-visual">
+    <svg class="visual-canvas" viewBox="0 0 400 400" id="ecb-svg">
+      <!-- ECB visualization: identical blocks produce identical ciphertext -->
+      <g id="ecb-blocks"></g>
+    </svg>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ CBC ═══════════════════════ -->
+<section class="mode-section" id="cbc-section" style="grid-template-columns:1fr 1fr;">
+  <div class="mode-visual" style="order:-1;">
+    <svg class="visual-canvas" viewBox="0 0 400 400" id="cbc-svg"></svg>
+  </div>
+  <div class="mode-info" data-mode="cbc">
+    <p class="mode-number">02 — MODO DE OPERACIÓN</p>
+    <span class="mode-tag" style="color:var(--cbc-color); border-color:var(--cbc-color);">ESTÁNDAR</span>
+    <h2 class="mode-name" style="color:var(--cbc-color);">CBC</h2>
+    <p class="mode-full-name">Cipher Block Chaining</p>
+    <p class="mode-desc">
+      Antes de cifrar, cada bloque recibe un <strong>XOR con el bloque cifrado anterior</strong>. Una cadena de dependencias que elimina los patrones.
+    </p>
+    <p class="mode-desc" style="opacity:0.55; font-size:1.05rem;">
+      El primer bloque usa un <strong>Vector de Inicialización (IV)</strong> único. Textos idénticos producen cifrados diferentes. Un error en un bloque afecta los siguientes.
+    </p>
+    <div class="mode-facts">
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Oculta patrones completamente</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ El IV garantiza unicidad del cifrado</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(224,90,43,0.4);"></div><span>✗ No permite cifrado paralelo</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(224,90,43,0.4);"></div><span>✗ Propagación de errores en cadena</span></div>
+    </div>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ CFB ═══════════════════════ -->
+<section class="mode-section" id="cfb-section">
+  <div class="mode-info" data-mode="cfb">
+    <p class="mode-number">03 — MODO DE OPERACIÓN</p>
+    <span class="mode-tag" style="color:var(--cfb-color); border-color:var(--cfb-color);">FLUJO</span>
+    <h2 class="mode-name" style="color:var(--cfb-color);">CFB</h2>
+    <p class="mode-full-name">Cipher Feedback</p>
+    <p class="mode-desc">
+      Transforma el cifrado de bloque en un <strong>cifrado de flujo</strong>. El texto cifrado anterior alimenta la siguiente operación de cifrado.
+    </p>
+    <p class="mode-desc" style="opacity:0.55; font-size:1.05rem;">
+      Ideal para transmitir datos cuyo tamaño <strong>no sea múltiplo</strong> del bloque (128 bits). Maneja flujos de cualquier longitud con seguridad.
+    </p>
+    <div class="mode-facts">
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Datos de tamaño arbitrario</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Útil en transmisiones en tiempo real</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(224,90,43,0.4);"></div><span>✗ Propagación de errores (como CBC)</span></div>
+    </div>
+  </div>
+  <div class="mode-visual">
+    <svg class="visual-canvas" viewBox="0 0 400 400" id="cfb-svg"></svg>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ OFB ═══════════════════════ -->
+<section class="mode-section" id="ofb-section">
+  <div class="mode-visual" style="order:-1;">
+    <svg class="visual-canvas" viewBox="0 0 400 400" id="ofb-svg"></svg>
+  </div>
+  <div class="mode-info" data-mode="ofb">
+    <p class="mode-number">04 — MODO DE OPERACIÓN</p>
+    <span class="mode-tag" style="color:var(--ofb-color); border-color:var(--ofb-color);">ROBUSTO</span>
+    <h2 class="mode-name" style="color:var(--ofb-color);">OFB</h2>
+    <p class="mode-full-name">Output Feedback</p>
+    <p class="mode-desc">
+      El feedback proviene de la <strong>salida directa del cifrador</strong>, no del texto cifrado. Genera un flujo de claves completamente independiente.
+    </p>
+    <p class="mode-desc" style="opacity:0.55; font-size:1.05rem;">
+      Gran ventaja: errores en la transmisión de un bit <strong>no se propagan</strong> a bloques siguientes. Usado en comunicaciones por satélite donde los errores son inevitables.
+    </p>
+    <div class="mode-facts">
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Sin propagación de errores de bit</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Flujo de claves pre-generado</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(255,226,70,0.4);"></div><span>⚠ Requiere IV único (nunca reutilizar)</span></div>
+    </div>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ CTR ═══════════════════════ -->
+<section class="mode-section" id="ctr-section">
+  <div class="mode-info" data-mode="ctr">
+    <p class="mode-number">05 — MODO DE OPERACIÓN</p>
+    <span class="mode-tag" style="color:var(--ctr-color); border-color:var(--ctr-color);">MODERNO ★</span>
+    <h2 class="mode-name" style="color:var(--ctr-color);">CTR</h2>
+    <p class="mode-full-name">Counter Mode</p>
+    <p class="mode-desc">
+      Un <strong>contador + nonce</strong> se cifra y el resultado se aplica con XOR al texto plano. No depende de bloques anteriores.
+    </p>
+    <p class="mode-desc" style="opacity:0.55; font-size:1.05rem;">
+      El modo más moderno y eficiente. <strong>Paralelismo total</strong>: cifra y descifra múltiples bloques simultáneamente en procesadores multinúcleo. Estándar para discos, VPNs y redes de alta velocidad.
+    </p>
+    <div class="mode-facts">
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Paralelismo total (Multi-core)</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Rápido y seguro</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Sin propagación de errores</span></div>
+      <div class="fact"><div class="fact-icon" style="background:rgba(0,200,150,0.3);"></div><span>✓ Acceso aleatorio a cualquier bloque</span></div>
+    </div>
+  </div>
+  <div class="mode-visual">
+    <svg class="visual-canvas" viewBox="0 0 400 400" id="ctr-svg"></svg>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ COMPARE ═══════════════════════ -->
+<section id="compare">
+  <div style="max-width:1100px; margin:0 auto; width:100%;">
+    <div class="compare-header">
+      <p style="font-family:var(--mono); font-size:0.65rem; letter-spacing:0.4em; opacity:0.35; margin-bottom:1rem;">COMPARATIVA FINAL</p>
+      <h2 class="compare-title">¿Cuál usar<br>y cuándo?</h2>
+    </div>
+    <div style="overflow-x:auto;">
+      <table class="compare-table" style="border-collapse:separate; border-spacing:1px; width:100%;">
+        <thead>
+          <tr>
+            <td style="background:rgba(255,255,255,0.02); padding:1.5rem;"></td>
+            <th style="color:var(--ecb-color);">ECB</th>
+            <th style="color:var(--cbc-color);">CBC</th>
+            <th style="color:var(--cfb-color);">CFB</th>
+            <th style="color:var(--ofb-color);">OFB</th>
+            <th style="color:var(--ctr-color);">CTR</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>VELOCIDAD</td>
+            <td><div class="status-yes">✓</div></td>
+            <td><div class="status-no">✗</div></td>
+            <td><div class="status-no">✗</div></td>
+            <td><div class="status-no">✗</div></td>
+            <td><div class="status-yes">✓</div></td>
+          </tr>
+          <tr>
+            <td>SEGURIDAD</td>
+            <td><div class="status-no">✗</div></td>
+            <td><div class="status-yes">✓</div></td>
+            <td><div class="status-yes">✓</div></td>
+            <td><div class="status-yes">✓</div></td>
+            <td><div class="status-yes">✓</div></td>
+          </tr>
+          <tr>
+            <td>PARALELO</td>
+            <td><div class="status-yes">✓</div></td>
+            <td><div class="status-partial">~</div></td>
+            <td><div class="status-partial">~</div></td>
+            <td><div class="status-no">✗</div></td>
+            <td><div class="status-yes">✓</div></td>
+          </tr>
+          <tr>
+            <td>PROP. ERROR</td>
+            <td><div class="status-no">✗</div></td>
+            <td><div class="status-yes">✓</div></td>
+            <td><div class="status-yes">✓</div></td>
+            <td><div class="status-no">✗</div></td>
+            <td><div class="status-no">✗</div></td>
+          </tr>
+          <tr>
+            <td>USO REAL</td>
+            <td style="font-family:var(--mono); font-size:0.6rem; color:rgba(255,255,255,0.35);">Legado</td>
+            <td style="font-family:var(--mono); font-size:0.6rem; color:rgba(58,143,255,0.7);">TLS/SSL</td>
+            <td style="font-family:var(--mono); font-size:0.6rem; color:rgba(155,93,229,0.7);">Streaming</td>
+            <td style="font-family:var(--mono); font-size:0.6rem; color:rgba(0,200,150,0.7);">Satélite</td>
+            <td style="font-family:var(--mono); font-size:0.6rem; color:rgba(255,226,70,0.7);">Discos / VPN</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="font-family:var(--mono); font-size:0.65rem; text-align:center; opacity:0.3; margin-top:2rem; letter-spacing:0.1em;">
+      ~ = descifrado paralelo disponible, cifrado secuencial
+    </p>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ CASOS REALES ═══════════════════════ -->
+<section id="cases" style="background:var(--deep); min-height:60vh; padding:6rem 4rem;">
+  <div style="max-width:1100px; margin:0 auto;">
+    <p style="font-family:var(--mono); font-size:0.65rem; letter-spacing:0.4em; opacity:0.35; margin-bottom:1rem; text-align:center;">CASOS REALES</p>
+    <h2 style="font-size:clamp(2rem,5vw,3.5rem); font-weight:800; letter-spacing:-0.04em; text-align:center; margin-bottom:4rem;">En producción hoy</h2>
+    <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(200px,1fr)); gap:1px; background:rgba(255,255,255,0.06); border-radius:1rem; overflow:hidden;">
+      <div style="background:var(--black); padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:1rem;">🌐</div>
+        <p style="font-family:var(--mono); font-size:0.65rem; letter-spacing:0.2em; opacity:0.4; margin-bottom:0.5rem;">HTTPS / TLS</p>
+        <p style="font-size:1.1rem; line-height:1.75; opacity:0.75;">Navegación web segura. TLS 1.3 usa AES-GCM (basado en CTR) para cifrar cada sesión.</p>
+      </div>
+      <div style="background:var(--black); padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:1rem;">🔒</div>
+        <p style="font-family:var(--mono); font-size:0.65rem; letter-spacing:0.2em; opacity:0.4; margin-bottom:0.5rem;">VPN</p>
+        <p style="font-size:1.1rem; line-height:1.75; opacity:0.75;">WireGuard y OpenVPN usan CTR y CBC para proteger datos en tránsito sobre internet.</p>
+      </div>
+      <div style="background:var(--black); padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:1rem;">💾</div>
+        <p style="font-family:var(--mono); font-size:0.65rem; letter-spacing:0.2em; opacity:0.4; margin-bottom:0.5rem;">CIFRADO DE DISCO</p>
+        <p style="font-size:1.1rem; line-height:1.75; opacity:0.75;">BitLocker y LUKS usan variantes de CTR (XTS-AES) para cifrar discos completos con acceso aleatorio.</p>
+      </div>
+      <div style="background:var(--black); padding:2rem;">
+        <div style="font-size:2rem; margin-bottom:1rem;">📡</div>
+        <p style="font-family:var(--mono); font-size:0.65rem; letter-spacing:0.2em; opacity:0.4; margin-bottom:0.5rem;">SATÉLITE / RADIO</p>
+        <p style="font-size:1.1rem; line-height:1.75; opacity:0.75;">OFB se usa en canales ruidosos donde los errores de bit son frecuentes y la propagación es inaceptable.</p>
+      </div>
+    </div>
+  </div>
+</section>
+ 
+<!-- ═══════════════════════ CONCLUSION ═══════════════════════ -->
+<section id="conclusion">
+  <div class="conclusion-content">
+    <p class="conclusion-eyebrow">CONCLUSIÓN</p>
+    <h2 class="conclusion-title">
+      Un algoritmo,<br>
+      <span style="background:linear-gradient(135deg,#ffe246,#00c896); -webkit-background-clip:text; -webkit-text-fill-color:transparent; background-clip:text;">infinitas formas</span><br>
+      de usarlo.
+    </h2>
+    <p class="conclusion-body">
+      Los modos de operación son el puente entre la teoría del cifrado de bloques y la realidad técnica. Cada modo resuelve un problema distinto: ECB muestra por qué el contexto importa, CBC introduce la dependencia, CFB/OFB adaptan bloques a flujos, y CTR lleva AES al hardware moderno.
+    </p>
+    <div class="final-badges">
+      <span class="badge" style="border-color:rgba(224,90,43,0.4); color:var(--ecb-color);">ECB — Simple</span>
+      <span class="badge" style="border-color:rgba(58,143,255,0.4); color:var(--cbc-color);">CBC — Encadenado</span>
+      <span class="badge" style="border-color:rgba(155,93,229,0.4); color:var(--cfb-color);">CFB — Flujo</span>
+      <span class="badge" style="border-color:rgba(0,200,150,0.4); color:var(--ofb-color);">OFB — Robusto</span>
+      <span class="badge" style="border-color:rgba(255,226,70,0.4); color:var(--ctr-color);">CTR — Moderno ★</span>
+    </div>
+  </div>
+</section>
+ 
+<script>
+// ─── GSAP SETUP ───
+gsap.registerPlugin(ScrollTrigger);
+ 
+// ─── PROGRESS BAR ───
+window.addEventListener('scroll', () => {
+  const p = window.scrollY / (document.body.scrollHeight - window.innerHeight);
+  document.getElementById('progress-bar').style.width = (p * 100) + '%';
+});
+ 
+// ─── PARTICLE CANVAS ───
+const canvas = document.getElementById('particle-canvas');
+const ctx = canvas.getContext('2d');
+let W, H, particles = [];
+ 
+function resizeCanvas() {
+  W = canvas.width = window.innerWidth;
+  H = canvas.height = window.innerHeight;
+}
+resizeCanvas();
+window.addEventListener('resize', resizeCanvas);
+ 
+for (let i = 0; i < 80; i++) {
+  particles.push({
+    x: Math.random() * 2000,
+    y: Math.random() * 2000,
+    vx: (Math.random() - 0.5) * 0.3,
+    vy: (Math.random() - 0.5) * 0.3,
+    r: Math.random() * 1.5 + 0.3,
+    a: Math.random() * 0.5 + 0.1
+  });
+}
+ 
+function animParticles() {
+  ctx.clearRect(0, 0, W, H);
+  const sy = window.scrollY * 0.1;
+  for (const p of particles) {
+    p.x += p.vx; p.y += p.vy;
+    if (p.x < 0) p.x = W; if (p.x > W) p.x = 0;
+    if (p.y < 0) p.y = H; if (p.y > H) p.y = 0;
+    ctx.beginPath();
+    ctx.arc(p.x, p.y - sy % H, p.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${p.a})`;
+    ctx.fill();
+  }
+  requestAnimationFrame(animParticles);
+}
+animParticles();
+ 
+// ─── GRID BACKGROUND ───
+const grid = document.getElementById('grid-bg');
+for (let i = 0; i < 96; i++) {
+  const c = document.createElement('div');
+  c.className = 'grid-cell';
+  grid.appendChild(c);
+}
+ 
+// ─── INTRO ANIMATION ───
+const tl = gsap.timeline({ defaults: { ease: 'expo.out' } });
+tl.from('.intro-eyebrow', { opacity: 0, y: 20, duration: 1 })
+  .from('.intro-title', { opacity: 0, y: 60, duration: 1.2 }, '-=0.6')
+  .from('.intro-sub', { opacity: 0, y: 30, duration: 1 }, '-=0.8')
+  .from('.scroll-hint', { opacity: 0, duration: 0.8 }, '-=0.4');
+ 
+// ─── ZOOM-IN SCROLL EFFECT per section ───
+document.querySelectorAll('.mode-section, #intro-explainer, #compare, #cases, #conclusion').forEach(section => {
+  gsap.fromTo(section, 
+    { scale: 1.04, opacity: 0 },
+    {
+      scale: 1, opacity: 1,
+      duration: 1,
+      ease: 'expo.out',
+      scrollTrigger: {
+        trigger: section,
+        start: 'top 85%',
+        end: 'top 30%',
+        scrub: 0.5,
+      }
+    }
+  );
+});
+ 
+// ─── MODE INFO STAGGER ───
+document.querySelectorAll('.mode-info').forEach(info => {
+  const children = info.children;
+  gsap.from(children, {
+    opacity: 0, x: -40, stagger: 0.08, duration: 0.9, ease: 'expo.out',
+    scrollTrigger: { trigger: info, start: 'top 70%' }
+  });
+});
+ 
+// ─── NAV DOT HIGHLIGHT ───
+const sections = ['portada','intro','ecb-section','cbc-section','cfb-section','ofb-section','ctr-section','compare','conclusion'];
+const dots = document.querySelectorAll('.nav-dot');
+ 
+dots.forEach((dot, i) => {
+  dot.addEventListener('click', () => {
+    document.getElementById(sections[i])?.scrollIntoView({ behavior: 'smooth' });
+  });
+});
+ 
+ScrollTrigger.create({
+  onUpdate: self => {
+    const sy = window.scrollY + window.innerHeight * 0.4;
+    let active = 0;
+    sections.forEach((id, i) => {
+      const el = document.getElementById(id);
+      if (el && el.offsetTop <= sy) active = i;
+    });
+    dots.forEach((d, i) => d.classList.toggle('active', i === active));
+  }
+});
+ 
+// ─── SVG VISUALIZATIONS ───
+ 
+// ECB: identical blocks → identical ciphertext
+function buildECBSvg() {
+  const svg = document.getElementById('ecb-svg');
+  const colors = ['#e05a2b','#e05a2b','#e05a2b','#e05a2b'];
+  const labels = ['P₁','P₂','P₃','P₄'];
+  const cols = 4;
+  for (let row = 0; row < 2; row++) {
+    for (let col = 0; col < cols; col++) {
+      const x = 30 + col * 88;
+      const y = row === 0 ? 60 : 260;
+      const color = row === 0 ? 'rgba(255,255,255,0.08)' : `rgba(224,90,43,${0.15 + col * 0.02})`;
+      const stroke = row === 0 ? 'rgba(255,255,255,0.2)' : 'rgba(224,90,43,0.6)';
+      const label = row === 0 ? labels[col] : `C${col+1}`;
+      const rect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+      rect.setAttribute('x', x); rect.setAttribute('y', y);
+      rect.setAttribute('width', '70'); rect.setAttribute('height', '50');
+      rect.setAttribute('rx', '6');
+      rect.setAttribute('fill', color);
+      rect.setAttribute('stroke', stroke);
+      rect.setAttribute('stroke-width', '0.8');
+      svg.appendChild(rect);
+      const text = document.createElementNS('http://www.w3.org/2000/svg','text');
+      text.setAttribute('x', x + 35); text.setAttribute('y', y + 30);
+      text.setAttribute('text-anchor','middle');
+      text.setAttribute('fill', row === 0 ? 'rgba(255,255,255,0.5)' : 'rgba(224,90,43,0.9)');
+      text.setAttribute('font-family','Space Mono,monospace');
+      text.setAttribute('font-size','12');
+      text.textContent = label;
+      svg.appendChild(text);
+      // Arrow
+      const line = document.createElementNS('http://www.w3.org/2000/svg','line');
+      line.setAttribute('x1', x+35); line.setAttribute('y1', y === 60 ? 110 : y);
+      line.setAttribute('x2', x+35); line.setAttribute('y2', y === 60 ? 250 : y);
+      line.setAttribute('stroke','rgba(224,90,43,0.3)');
+      line.setAttribute('stroke-width','0.8');
+      line.setAttribute('marker-end','url(#arr)');
+      if (row === 0) svg.insertBefore(line, svg.firstChild);
+    }
+  }
+  // AES box at center
+  const aesRect = document.createElementNS('http://www.w3.org/2000/svg','rect');
+  aesRect.setAttribute('x','100'); aesRect.setAttribute('y','150');
+  aesRect.setAttribute('width','200'); aesRect.setAttribute('height','60');
+  aesRect.setAttribute('rx','8'); aesRect.setAttribute('fill','rgba(224,90,43,0.1)');
+  aesRect.setAttribute('stroke','rgba(224,90,43,0.4)'); aesRect.setAttribute('stroke-width','1');
+  svg.insertBefore(aesRect, svg.firstChild);
+  const aesText = document.createElementNS('http://www.w3.org/2000/svg','text');
+  aesText.setAttribute('x','200'); aesText.setAttribute('y','178');
+  aesText.setAttribute('text-anchor','middle'); aesText.setAttribute('fill','rgba(224,90,43,0.8)');
+  aesText.setAttribute('font-family','Space Mono,monospace'); aesText.setAttribute('font-size','11');
+  aesText.textContent = 'AES (misma clave)';
+  svg.insertBefore(aesText, svg.firstChild);
+  // Warning label
+  const warn = document.createElementNS('http://www.w3.org/2000/svg','text');
+  warn.setAttribute('x','200'); warn.setAttribute('y','360');
+  warn.setAttribute('text-anchor','middle'); warn.setAttribute('fill','rgba(224,90,43,0.5)');
+  warn.setAttribute('font-family','Space Mono,monospace'); warn.setAttribute('font-size','9');
+  warn.textContent = '⚠ Bloques iguales → cifrado igual';
+  svg.appendChild(warn);
+}
+buildECBSvg();
+ 
+// CBC: chain visualization
+function buildCBCSvg() {
+  const svg = document.getElementById('cbc-svg');
+  const ns = 'http://www.w3.org/2000/svg';
+  // IV
+  const ivR = document.createElementNS(ns,'rect');
+  ivR.setAttribute('x','20'); ivR.setAttribute('y','30');
+  ivR.setAttribute('width','60'); ivR.setAttribute('height','40');
+  ivR.setAttribute('rx','4'); ivR.setAttribute('fill','rgba(58,143,255,0.15)');
+  ivR.setAttribute('stroke','rgba(58,143,255,0.5)'); ivR.setAttribute('stroke-width','0.8');
+  svg.appendChild(ivR);
+  const ivT = document.createElementNS(ns,'text');
+  ivT.setAttribute('x','50'); ivT.setAttribute('y','55');
+  ivT.setAttribute('text-anchor','middle'); ivT.setAttribute('fill','rgba(58,143,255,0.8)');
+  ivT.setAttribute('font-family','Space Mono,monospace'); ivT.setAttribute('font-size','9');
+  ivT.textContent = 'IV';
+  svg.appendChild(ivT);
+ 
+  const blocks = [['P₁','C₁',100],['P₂','C₂',220],['P₃','C₃',340]];
+  blocks.forEach(([p,c,x], i) => {
+    // Plaintext block
+    const pR = document.createElementNS(ns,'rect');
+    pR.setAttribute('x',x-25+''); pR.setAttribute('y','30');
+    pR.setAttribute('width','60'); pR.setAttribute('height','40');
+    pR.setAttribute('rx','4'); pR.setAttribute('fill','rgba(255,255,255,0.06)');
+    pR.setAttribute('stroke','rgba(255,255,255,0.2)'); pR.setAttribute('stroke-width','0.8');
+    svg.appendChild(pR);
+    const pT = document.createElementNS(ns,'text');
+    pT.setAttribute('x',x+''); pT.setAttribute('y','55');
+    pT.setAttribute('text-anchor','middle'); pT.setAttribute('fill','rgba(255,255,255,0.5)');
+    pT.setAttribute('font-family','Space Mono,monospace'); pT.setAttribute('font-size','9');
+    pT.textContent = p;
+    svg.appendChild(pT);
+    // XOR
+    const xorC = document.createElementNS(ns,'circle');
+    xorC.setAttribute('cx',x+''); xorC.setAttribute('cy','120');
+    xorC.setAttribute('r','16'); xorC.setAttribute('fill','rgba(58,143,255,0.1)');
+    xorC.setAttribute('stroke','rgba(58,143,255,0.6)'); xorC.setAttribute('stroke-width','1');
+    svg.appendChild(xorC);
+    const xorT = document.createElementNS(ns,'text');
+    xorT.setAttribute('x',x+''); xorT.setAttribute('y','125');
+    xorT.setAttribute('text-anchor','middle'); xorT.setAttribute('fill','rgba(58,143,255,0.9)');
+    xorT.setAttribute('font-family','Space Mono,monospace'); xorT.setAttribute('font-size','12');
+    xorT.textContent = '⊕';
+    svg.appendChild(xorT);
+    // AES box
+    const aR = document.createElementNS(ns,'rect');
+    aR.setAttribute('x',x-30+''); aR.setAttribute('y','170');
+    aR.setAttribute('width','70'); aR.setAttribute('height','40');
+    aR.setAttribute('rx','4'); aR.setAttribute('fill','rgba(58,143,255,0.08)');
+    aR.setAttribute('stroke','rgba(58,143,255,0.3)'); aR.setAttribute('stroke-width','0.5');
+    svg.appendChild(aR);
+    const aT = document.createElementNS(ns,'text');
+    aT.setAttribute('x',x+''); aT.setAttribute('y','195');
+    aT.setAttribute('text-anchor','middle'); aT.setAttribute('fill','rgba(58,143,255,0.6)');
+    aT.setAttribute('font-family','Space Mono,monospace'); aT.setAttribute('font-size','8');
+    aT.textContent = 'AES';
+    svg.appendChild(aT);
+    // Ciphertext
+    const cR = document.createElementNS(ns,'rect');
+    cR.setAttribute('x',x-25+''); cR.setAttribute('y','250');
+    cR.setAttribute('width','60'); cR.setAttribute('height','40');
+    cR.setAttribute('rx','4'); cR.setAttribute('fill','rgba(58,143,255,0.15)');
+    cR.setAttribute('stroke','rgba(58,143,255,0.5)'); cR.setAttribute('stroke-width','0.8');
+    svg.appendChild(cR);
+    const cT = document.createElementNS(ns,'text');
+    cT.setAttribute('x',x+''); cT.setAttribute('y','275');
+    cT.setAttribute('text-anchor','middle'); cT.setAttribute('fill','rgba(58,143,255,0.9)');
+    cT.setAttribute('font-family','Space Mono,monospace'); cT.setAttribute('font-size','9');
+    cT.textContent = c;
+    svg.appendChild(cT);
+    // Lines
+    [[x,70,x,104],[x,136,x,170],[x,210,x,250]].forEach(([x1,y1,x2,y2]) => {
+      const l = document.createElementNS(ns,'line');
+      l.setAttribute('x1',x1+''); l.setAttribute('y1',y1+'');
+      l.setAttribute('x2',x2+''); l.setAttribute('y2',y2+'');
+      l.setAttribute('stroke','rgba(58,143,255,0.3)'); l.setAttribute('stroke-width','0.8');
+      svg.appendChild(l);
+    });
+    // Chain feedback arrow to next XOR
+    if (i < 2) {
+      const fb = document.createElementNS(ns,'path');
+      fb.setAttribute('d',`M${x+25},270 Q${x+80},270 ${x+80},340 Q${x+80},370 ${x+120-25},360 L${x+120-25},290`);
+      fb.setAttribute('fill','none'); fb.setAttribute('stroke','rgba(58,143,255,0.25)'); fb.setAttribute('stroke-width','0.8');
+      svg.appendChild(fb);
+    }
+  });
+  // IV arrow to first XOR
+  const ivL = document.createElementNS(ns,'line');
+  ivL.setAttribute('x1','50'); ivL.setAttribute('y1','70');
+  ivL.setAttribute('x2','85'); ivL.setAttribute('y2','120');
+  ivL.setAttribute('stroke','rgba(58,143,255,0.3)'); ivL.setAttribute('stroke-width','0.8');
+  svg.appendChild(ivL);
+  // Label
+  const lbl = document.createElementNS(ns,'text');
+  lbl.setAttribute('x','200'); lbl.setAttribute('y','360');
+  lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill','rgba(58,143,255,0.4)');
+  lbl.setAttribute('font-family','Space Mono,monospace'); lbl.setAttribute('font-size','9');
+  lbl.textContent = 'cada bloque depende del anterior';
+  svg.appendChild(lbl);
+}
+buildCBCSvg();
+ 
+// CFB: stream feedback
+function buildCFBSvg() {
+  const svg = document.getElementById('cfb-svg');
+  const ns = 'http://www.w3.org/2000/svg';
+  const color = '#9b5de5';
+  // Draw stream lines
+  for (let i = 0; i < 12; i++) {
+    const y = 40 + i * 28;
+    const w = 60 + Math.random() * 140;
+    const l = document.createElementNS(ns,'line');
+    l.setAttribute('x1','40'); l.setAttribute('y1',y+'');
+    l.setAttribute('x2',w+''); l.setAttribute('y2',y+'');
+    l.setAttribute('stroke',`rgba(155,93,229,${0.1 + i * 0.04})`);
+    l.setAttribute('stroke-width','2');
+    l.setAttribute('stroke-linecap','round');
+    svg.appendChild(l);
+  }
+  // Main box
+  const r = document.createElementNS(ns,'rect');
+  r.setAttribute('x','120'); r.setAttribute('y','150');
+  r.setAttribute('width','160'); r.setAttribute('height','80');
+  r.setAttribute('rx','8'); r.setAttribute('fill',`rgba(155,93,229,0.1)`);
+  r.setAttribute('stroke',`rgba(155,93,229,0.5)`); r.setAttribute('stroke-width','1');
+  svg.appendChild(r);
+  const t = document.createElementNS(ns,'text');
+  t.setAttribute('x','200'); t.setAttribute('y','188');
+  t.setAttribute('text-anchor','middle'); t.setAttribute('fill',`rgba(155,93,229,0.9)`);
+  t.setAttribute('font-family','Space Mono,monospace'); t.setAttribute('font-size','11');
+  t.textContent = 'AES (CFB)';
+  svg.appendChild(t);
+  const t2 = document.createElementNS(ns,'text');
+  t2.setAttribute('x','200'); t2.setAttribute('y','208');
+  t2.setAttribute('text-anchor','middle'); t2.setAttribute('fill',`rgba(155,93,229,0.5)`);
+  t2.setAttribute('font-family','Space Mono,monospace'); t2.setAttribute('font-size','9');
+  t2.textContent = 'Bloque → Flujo';
+  svg.appendChild(t2);
+  // Feedback arc
+  const path = document.createElementNS(ns,'path');
+  path.setAttribute('d','M200,230 Q350,230 350,190 Q350,140 280,140');
+  path.setAttribute('fill','none'); path.setAttribute('stroke',`rgba(155,93,229,0.3)`);
+  path.setAttribute('stroke-width','1'); path.setAttribute('stroke-dasharray','4,4');
+  svg.appendChild(path);
+  const fbT = document.createElementNS(ns,'text');
+  fbT.setAttribute('x','200'); fbT.setAttribute('y','370');
+  fbT.setAttribute('text-anchor','middle'); fbT.setAttribute('fill',`rgba(155,93,229,0.4)`);
+  fbT.setAttribute('font-family','Space Mono,monospace'); fbT.setAttribute('font-size','9');
+  fbT.textContent = 'feedback del texto cifrado';
+  svg.appendChild(fbT);
+}
+buildCFBSvg();
+ 
+// OFB: wave visualization
+function buildOFBSvg() {
+  const svg = document.getElementById('ofb-svg');
+  const ns = 'http://www.w3.org/2000/svg';
+  // Sine wave
+  let d = 'M 20 200 ';
+  for (let x = 0; x <= 360; x += 4) {
+    const y = 200 + Math.sin(x * Math.PI / 60) * 70;
+    d += `L ${x+20} ${y} `;
+  }
+  const path = document.createElementNS(ns,'path');
+  path.setAttribute('d', d); path.setAttribute('fill','none');
+  path.setAttribute('stroke','rgba(0,200,150,0.5)'); path.setAttribute('stroke-width','2');
+  svg.appendChild(path);
+  // Second wave offset
+  let d2 = 'M 20 200 ';
+  for (let x = 0; x <= 360; x += 4) {
+    const y = 200 + Math.sin((x+40) * Math.PI / 60) * 40;
+    d2 += `L ${x+20} ${y} `;
+  }
+  const path2 = document.createElementNS(ns,'path');
+  path2.setAttribute('d', d2); path2.setAttribute('fill','none');
+  path2.setAttribute('stroke','rgba(0,200,150,0.2)'); path2.setAttribute('stroke-width','1');
+  path2.setAttribute('stroke-dasharray','4,4');
+  svg.appendChild(path2);
+  // Labels
+  [[200,100,'Flujo de clave'],[200,310,'Texto cifrado']].forEach(([x,y,label]) => {
+    const t = document.createElementNS(ns,'text');
+    t.setAttribute('x',x+''); t.setAttribute('y',y+'');
+    t.setAttribute('text-anchor','middle'); t.setAttribute('fill','rgba(0,200,150,0.5)');
+    t.setAttribute('font-family','Space Mono,monospace'); t.setAttribute('font-size','10');
+    t.textContent = label;
+    svg.appendChild(t);
+  });
+  const note = document.createElementNS(ns,'text');
+  note.setAttribute('x','200'); note.setAttribute('y','370');
+  note.setAttribute('text-anchor','middle'); note.setAttribute('fill','rgba(0,200,150,0.4)');
+  note.setAttribute('font-family','Space Mono,monospace'); note.setAttribute('font-size','9');
+  note.textContent = 'errores no se propagan';
+  svg.appendChild(note);
+}
+buildOFBSvg();
+ 
+// CTR: parallel counters
+function buildCTRSvg() {
+  const svg = document.getElementById('ctr-svg');
+  const ns = 'http://www.w3.org/2000/svg';
+  const color = '#ffe246';
+  // 4 parallel tracks
+  for (let col = 0; col < 4; col++) {
+    const x = 30 + col * 92;
+    // Nonce+Counter box
+    const r1 = document.createElementNS(ns,'rect');
+    r1.setAttribute('x',x+''); r1.setAttribute('y','30');
+    r1.setAttribute('width','72'); r1.setAttribute('height','40');
+    r1.setAttribute('rx','4'); r1.setAttribute('fill','rgba(255,226,70,0.1)');
+    r1.setAttribute('stroke','rgba(255,226,70,0.4)'); r1.setAttribute('stroke-width','0.8');
+    svg.appendChild(r1);
+    const t1 = document.createElementNS(ns,'text');
+    t1.setAttribute('x',x+36+''); t1.setAttribute('y','55');
+    t1.setAttribute('text-anchor','middle'); t1.setAttribute('fill','rgba(255,226,70,0.8)');
+    t1.setAttribute('font-family','Space Mono,monospace'); t1.setAttribute('font-size','8');
+    t1.textContent = `N||${col}`;
+    svg.appendChild(t1);
+    // AES
+    const r2 = document.createElementNS(ns,'rect');
+    r2.setAttribute('x',x+''); r2.setAttribute('y','120');
+    r2.setAttribute('width','72'); r2.setAttribute('height','40');
+    r2.setAttribute('rx','4'); r2.setAttribute('fill','rgba(255,226,70,0.06)');
+    r2.setAttribute('stroke','rgba(255,226,70,0.2)'); r2.setAttribute('stroke-width','0.5');
+    svg.appendChild(r2);
+    const t2 = document.createElementNS(ns,'text');
+    t2.setAttribute('x',x+36+''); t2.setAttribute('y','144');
+    t2.setAttribute('text-anchor','middle'); t2.setAttribute('fill','rgba(255,226,70,0.5)');
+    t2.setAttribute('font-family','Space Mono,monospace'); t2.setAttribute('font-size','7');
+    t2.textContent = 'AES';
+    svg.appendChild(t2);
+    // XOR
+    const c = document.createElementNS(ns,'circle');
+    c.setAttribute('cx',x+36+''); c.setAttribute('cy','215');
+    c.setAttribute('r','14'); c.setAttribute('fill','rgba(255,226,70,0.08)');
+    c.setAttribute('stroke','rgba(255,226,70,0.4)'); c.setAttribute('stroke-width','0.8');
+    svg.appendChild(c);
+    const tx = document.createElementNS(ns,'text');
+    tx.setAttribute('x',x+36+''); tx.setAttribute('y','220');
+    tx.setAttribute('text-anchor','middle'); tx.setAttribute('fill','rgba(255,226,70,0.9)');
+    tx.setAttribute('font-family','Space Mono,monospace'); tx.setAttribute('font-size','11');
+    tx.textContent = '⊕';
+    svg.appendChild(tx);
+    // Output
+    const r3 = document.createElementNS(ns,'rect');
+    r3.setAttribute('x',x+''); r3.setAttribute('y','270');
+    r3.setAttribute('width','72'); r3.setAttribute('height','35');
+    r3.setAttribute('rx','4'); r3.setAttribute('fill','rgba(255,226,70,0.12)');
+    r3.setAttribute('stroke','rgba(255,226,70,0.4)'); r3.setAttribute('stroke-width','0.8');
+    svg.appendChild(r3);
+    const t3 = document.createElementNS(ns,'text');
+    t3.setAttribute('x',x+36+''); t3.setAttribute('y','292');
+    t3.setAttribute('text-anchor','middle'); t3.setAttribute('fill','rgba(255,226,70,0.9)');
+    t3.setAttribute('font-family','Space Mono,monospace'); t3.setAttribute('font-size','9');
+    t3.textContent = `C${col+1}`;
+    svg.appendChild(t3);
+    // Lines
+    [[x+36,70,x+36,120],[x+36,160,x+36,201],[x+36,229,x+36,270]].forEach(([x1,y1,x2,y2]) => {
+      const l = document.createElementNS(ns,'line');
+      l.setAttribute('x1',x1+''); l.setAttribute('y1',y1+'');
+      l.setAttribute('x2',x2+''); l.setAttribute('y2',y2+'');
+      l.setAttribute('stroke','rgba(255,226,70,0.2)'); l.setAttribute('stroke-width','0.8');
+      svg.appendChild(l);
+    });
+  }
+  // Label
+  const lbl = document.createElementNS(ns,'text');
+  lbl.setAttribute('x','200'); lbl.setAttribute('y','360');
+  lbl.setAttribute('text-anchor','middle'); lbl.setAttribute('fill','rgba(255,226,70,0.4)');
+  lbl.setAttribute('font-family','Space Mono,monospace'); lbl.setAttribute('font-size','9');
+  lbl.textContent = '4 bloques cifrados en paralelo simultáneamente';
+  svg.appendChild(lbl);
+}
+buildCTRSvg();
+ 
+// ─── ECB DEMO ANIMATION ───
+const ecbOut = document.getElementById('ecb-out');
+const ciphers = ['A3F2 A3F2 A3F2 A3F2','8B1D 8B1D 8B1D 8B1D','FF29 FF29 FF29 FF29'];
+let ci = 0;
+setInterval(() => {
+  ci = (ci + 1) % ciphers.length;
+  ecbOut.textContent = ciphers[ci];
+}, 2500);
+ 
+// ─── COMPARE TABLE ANIMATION ───
+gsap.from('.compare-table tr', {
+  opacity: 0, x: -20, stagger: 0.08, duration: 0.6,
+  scrollTrigger: { trigger: '.compare-table', start: 'top 70%' }
+});
+ 
+// ─── CONCLUSION ───
+gsap.from('.conclusion-content > *', {
+  opacity: 0, y: 40, stagger: 0.12, duration: 1,
+  scrollTrigger: { trigger: '#conclusion', start: 'top 60%' }
+});
+</script>
+</body>
+</html>
+ 
